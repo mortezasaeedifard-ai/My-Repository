@@ -1,0 +1,98 @@
+name: Render Earthrise MP4
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - src/**
+      - public/**
+      - package.json
+      - package-lock.json
+      - tsconfig.json
+      - .github/workflows/render-earthrise.yml
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Linux renderer dependencies and Persian font
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libnss3 libdbus-1-3 libatk1.0-0 libasound2t64 \
+            libxrandr2 libxkbcommon-dev libxfixes3 libxcomposite1 \
+            libxdamage1 libgbm-dev libcups2 libcairo2 \
+            libpango-1.0-0 libatk-bridge2.0-0 fonts-noto-core fontconfig ffmpeg
+          fc-cache -f
+          fc-match 'Noto Sans Arabic'
+
+      - name: Verify original photograph is committed and unchanged
+        run: |
+          git ls-files --error-unmatch public/earthrise.jpg
+          echo 'fa36da06b460e9c7d9bba263c4fc13b0c2e4a1cb6d4ee9e3ada324c25279dbca  public/earthrise.jpg' | sha256sum --check
+
+      - name: Install locked project dependencies
+        run: npm ci
+
+      - name: Check TypeScript
+        run: npm run typecheck
+
+      - name: Install Remotion render browser
+        run: npx --no-install remotion browser ensure
+
+      - name: Render Earthrise (300 frames at 30 fps)
+        run: >-
+          npx --no-install remotion render src/index.ts Earthrise
+          out/earthrise-final.mp4
+          --codec=h264 --pixel-format=yuv420p --concurrency=2
+
+      - name: Verify MP4 output dimensions, duration and frame rate
+        run: |
+          ffprobe -v error -select_streams v:0 \
+            -show_entries stream=codec_name,width,height,avg_frame_rate,nb_frames:format=duration \
+            -of json out/earthrise-final.mp4 > out/metadata.json
+          python3 - <<'PY'
+          import json
+          from fractions import Fraction
+          from pathlib import Path
+          metadata = json.loads(Path('out/metadata.json').read_text())
+          video = metadata['streams'][0]
+          assert video['codec_name'] == 'h264', video
+          assert (video['width'], video['height']) == (1080, 1920), video
+          assert Fraction(video['avg_frame_rate']) == 30, video
+          assert int(video['nb_frames']) == 300, video
+          assert abs(float(metadata['format']['duration']) - 10) < 0.04, metadata
+          print('Verified: H.264 MP4, 1080x1920, 30fps, 300 frames, 10 seconds.')
+          PY
+
+      - name: Publish final MP4 artifact
+        id: video
+        uses: actions/upload-artifact@v4
+        with:
+          name: earthrise-final.mp4
+          path: out/earthrise-final.mp4
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Link output in run summary
+        env:
+          ARTIFACT_URL: ${{ steps.video.outputs.artifact-url }}
+        run: |
+          echo 'Earthrise: 1080x1920, 30fps, 10 seconds, H.264 MP4.' >> "$GITHUB_STEP_SUMMARY"
+          echo "[Download earthrise-final.mp4 artifact]($ARTIFACT_URL)" >> "$GITHUB_STEP_SUMMARY"
