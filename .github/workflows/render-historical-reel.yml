@@ -1,0 +1,150 @@
+name: Render Historical Reel
+run-name: Render ${{ inputs.reel || 'requested reel' }} — historical reel
+
+on:
+  workflow_dispatch:
+    inputs:
+      reel:
+        description: Reel to render (Codex adds new reels to this list)
+        type: choice
+        required: true
+        default: earthrise
+        options:
+          - earthrise
+          - earthrise-original
+  push:
+    branches: [main]
+    paths:
+      - src/**
+      - public/**
+      - reels/**
+      - scripts/**
+      - verification/**
+      - package.json
+      - package-lock.json
+      - tsconfig.json
+      - .github/workflows/render-historical-reel.yml
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      REEL_ID: ${{ inputs.reel || '' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up existing Node version and npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Select manual reel or Codex render request
+        id: select
+        run: node scripts/select-reel.cjs
+
+      - name: Install Linux renderer dependencies and Persian font
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libnss3 libdbus-1-3 libatk1.0-0 libasound2t64 \
+            libxrandr2 libxkbcommon-dev libxfixes3 libxcomposite1 \
+            libxdamage1 libgbm-dev libcups2 libcairo2 \
+            libpango-1.0-0 libatk-bridge2.0-0 fonts-noto-core fontconfig ffmpeg
+          fc-cache -f
+
+      - name: Install locked dependencies on the cloud runner
+        run: npm ci
+
+      - name: Verify original files, reel assets and template behavior
+        run: |
+          npm run typecheck
+          npm run check:master
+
+      - name: Read locked browser version
+        id: version
+        run: node -e 'require("fs").appendFileSync(process.env.GITHUB_OUTPUT, "remotion="+require("remotion/package.json").version+"\n")'
+
+      - name: Restore and save Linux Remotion browser cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.remotion/chrome-headless-shell
+          key: browser-${{ runner.os }}-${{ runner.arch }}-remotion-${{ steps.version.outputs.remotion }}
+
+      - name: Restore and save Webpack cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/webpack
+          key: webpack-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            webpack-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}-
+
+      - name: Ensure render browser is available
+        run: npx --no-install remotion browser ensure
+
+      - name: Render selected reel without overwriting earlier outputs
+        run: npm run render:reel -- "$REEL_ID"
+
+      - name: Render unchanged Earthrise reference in the same environment
+        if: steps.select.outputs.reel == 'earthrise'
+        run: >-
+          npx --no-install remotion render src/index.ts Earthrise
+          out/master/verification/earthrise-reference.mp4
+          --codec=h264 --pixel-format=yuv420p --concurrency=2
+
+      - name: Verify output and compare all Earthrise frames
+        run: python3 scripts/compare-earthrise.py
+
+      - name: Create multimedia verification fixtures
+        if: steps.select.outputs.reel == 'earthrise'
+        run: python3 scripts/create-smoke-fixtures.py
+
+      - name: Render independent image, video, Persian captions and audio tracks
+        if: steps.select.outputs.reel == 'earthrise'
+        run: >-
+          npx --no-install remotion render src/master.ts HistoricalReel
+          out/master/verification/multimedia-smoke.mp4
+          --props=out/master/verification/smoke-props.json
+          --codec=h264 --pixel-format=yuv420p --concurrency=2
+
+      - name: Verify multimedia video and audible sound
+        if: steps.select.outputs.reel == 'earthrise'
+        run: python3 scripts/check-smoke.py
+
+      - name: Publish selected MP4
+        id: video
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.select.outputs.reel }}-mp4-${{ github.run_number }}
+          path: out/master/render/*.mp4
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Preserve comparison and verification results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.select.outputs.reel }}-verification-${{ github.run_number }}
+          path: |
+            out/master/comparison.json
+            out/master/render-info.json
+            out/master/verification/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Show download link
+        env:
+          ARTIFACT_URL: ${{ steps.video.outputs.artifact-url }}
+        run: |
+          echo "Reel: $REEL_ID" >> "$GITHUB_STEP_SUMMARY"
+          echo "[Download rendered MP4]($ARTIFACT_URL)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$REEL_ID" = earthrise ]; then
+            echo 'All 300 frames match both the unchanged original and the approved MP4.' >> "$GITHUB_STEP_SUMMARY"
+          fi

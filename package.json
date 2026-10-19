@@ -5,8 +5,21 @@
   "scripts": {
     "studio": "remotion studio src/index.ts --no-open",
     "render": "remotion render src/index.ts Earthrise out/earthrise.mp4 --codec=h264 --pixel-format=yuv420p",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "studio:master": "remotion studio src/master.ts --no-open",
+    "render:reel": "node scripts/render-reel.cjs",
+    "check:master": "node scripts/check-master.cjs"
   },
-  "dependencies": {"remotion": "4.0.534", "@remotion/cli": "4.0.534", "react": "19.0.0", "react-dom": "19.0.0"},
-  "devDependencies": {"typescript": "5.8.3", "@types/react": "19.0.10", "@types/react-dom": "19.0.4"}
+  "dependencies": {
+    "remotion": "4.0.534",
+    "@remotion/cli": "4.0.534",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "@remotion/media": "4.0.534"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3",
+    "@types/react": "19.0.10",
+    "@types/react-dom": "19.0.4"
+  }
 }

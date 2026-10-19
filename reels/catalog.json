@@ -1,0 +1,4 @@
+{
+  "earthrise": {"composition": "EarthriseTemplate", "definition": "reels/earthrise.json", "output": "earthrise-template"},
+  "earthrise-original": {"composition": "Earthrise", "width": 1080, "height": 1920, "fps": 30, "durationSeconds": 10, "output": "earthrise-original"}
+}

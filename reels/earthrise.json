@@ -1,0 +1,23 @@
+{
+  "title": "Earthrise — template edition",
+  "width": 1080, "height": 1920, "fps": 30, "durationSeconds": 10,
+  "backgroundColor": "#000",
+  "media": [{
+    "id": "Earth photograph", "kind": "image", "src": "earthrise.jpg",
+    "startSeconds": 0, "durationSeconds": 10,
+    "camera": {
+      "width": 1920, "height": 1920,
+      "focalPoint": {"x": 0.568, "y": 0.517},
+      "position": {"x": 540, "y": 992.64},
+      "scale": {"from": 1, "to": 1.8, "easing": "ease-in-out"}
+    },
+    "fade": {"inSeconds": 1.6, "easing": [0.22, 0, 0.36, 1]}
+  }],
+  "texts": [{
+    "id": "Persian closing question", "startSeconds": 7, "durationSeconds": 3,
+    "content": "برای دیدن خانه،\nچقدر باید دور شد؟",
+    "fade": {"inSeconds": 1.2, "easing": [0.22, 0, 0.36, 1]},
+    "rise": {"pixels": 18, "durationSeconds": 1.4, "easing": [0.22, 1, 0.36, 1]}
+  }],
+  "audio": []
+}
