@@ -146,5 +146,5 @@ jobs:
           echo "Reel: $REEL_ID" >> "$GITHUB_STEP_SUMMARY"
           echo "[Download rendered MP4]($ARTIFACT_URL)" >> "$GITHUB_STEP_SUMMARY"
           if [ "$REEL_ID" = earthrise ]; then
-            echo 'All 300 frames match both the unchanged original and the approved MP4.' >> "$GITHUB_STEP_SUMMARY"
+            echo 'All 300 frames match the same-run original; approved MP4 similarity and exact-frame counts are recorded in comparison.json.' >> "$GITHUB_STEP_SUMMARY"
           fi

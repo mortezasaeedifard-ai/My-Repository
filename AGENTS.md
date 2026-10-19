@@ -34,5 +34,8 @@
 - Keep the original Earthrise workflow manually runnable; the master workflow
   owns automatic push renders to avoid two jobs for every new reel.
 - Changes to HistoricalReel must preserve Earthrise pixel comparison. The CI
-  checks all 300 decoded frames against both the original component and approved
-  video, plus a short image/video/Persian/audio integration render.
+  requires all 300 decoded frames to match the same-run original component.
+  The separately encoded approved video is checked for exact-frame counts and
+  per-frame SSIM (mean >= .999, minimum >= .995), because encoded MP4 pixels can
+  vary slightly across render environments. Keep these results explicit.
+  A short image/video/Persian/audio integration render must also pass.
