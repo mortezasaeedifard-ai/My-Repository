@@ -19,5 +19,13 @@
     "fps": 30,
     "durationSeconds": 8,
     "output": "easing-comparison-01"
+  },
+  "counter-animation-01": {
+    "composition": "CounterAnimation01",
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "durationSeconds": 6,
+    "output": "counter-animation-01"
   }
 }
