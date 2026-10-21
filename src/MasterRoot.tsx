@@ -1,4 +1,5 @@
 import {Composition, Folder} from 'remotion';
+import {EasingComparison01} from './reels/EasingComparison01';
 import {RemotionRoot as OriginalEarthriseRoot} from './Root';
 import {EarthriseTemplate, earthriseMetadata} from './reels/EarthriseTemplate';
 import {HistoricalReel} from './templates/HistoricalReel';
@@ -6,6 +7,8 @@ import {validateReel} from './templates/validate';
 
 export const MasterRoot = () => <>
   <OriginalEarthriseRoot />
+  <Composition id="EasingComparison01" component={EasingComparison01}
+    width={1080} height={1920} fps={30} durationInFrames={240} />
   <Folder name="Historical-Reels">
     <Composition id="EarthriseTemplate" component={EarthriseTemplate}
       width={1080} height={1920} fps={30} durationInFrames={300} calculateMetadata={earthriseMetadata} />
