@@ -12,6 +12,7 @@ on:
         options:
           - earthrise
           - earthrise-original
+          - easing-comparison-01
   push:
     branches: [main]
     paths:
